@@ -60,6 +60,33 @@ export const createProject = async (req, res) => {
 };
 
 export const updateProject = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, client_id } = req.body;
+        
+        const checkResult = await pool.query("SELECT created_by FROM projects WHERE id = $1", [id]);
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ error: "Project not found" });
+        }
+        
+        if (req.user.role === 'Project Manager' && checkResult.rows[0].created_by !== req.user.id) {
+            return res.status(403).json({ error: "Forbidden: You can only update projects you created" });
+        }
+
+        const result = await pool.query(
+            "UPDATE projects SET name = COALESCE($1, name), description = COALESCE($2, description), client_id = COALESCE($3, client_id) WHERE id = $4 RETURNING *",
+            [name, description, client_id, id]
+        );
+        
+        res.json({ project: result.rows[0] });
+    } catch (err) {
+        if (err.code === '23503') {
+            return res.status(400).json({ error: "Invalid client_id" });
+        }
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+
 };
 
 export const deleteProject = async (req, res) => {
