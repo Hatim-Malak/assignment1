@@ -112,6 +112,42 @@ export const createTask = async (req, res) => {
 };
 
 export const updateTask = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { id } = req.params;
+        const { title, description, project_id, assigned_to, status, priority, due_date } = req.body;
+        
+        const existingResult = await client.query("SELECT t.*, p.created_by as project_created_by FROM tasks t JOIN projects p ON t.project_id = p.id WHERE t.id = $1", [id]);
+        if (existingResult.rows.length === 0) {
+            return res.status(404).json({ error: "Task not found" });
+        }
+        
+        const existingTask = existingResult.rows[0];
+        
+        if (req.user.role === 'Project Manager' && existingTask.project_created_by !== req.user.id) {
+            return res.status(403).json({ error: "Forbidden: You can only update tasks in your own projects" });
+        }
+
+        await client.query('BEGIN');
+        const result = await client.query(
+            "UPDATE tasks SET title = COALESCE($1, title), description = COALESCE($2, description), project_id = COALESCE($3, project_id), assigned_to = COALESCE($4, assigned_to), status = COALESCE($5, status), priority = COALESCE($6, priority), due_date = COALESCE($7, due_date) WHERE id = $8 RETURNING *",
+            [title, description, project_id, assigned_to, status, priority, due_date, id]
+        );
+        
+        const updatedTask = result.rows[0];
+        if (status && status !== existingTask.status) {
+            await logTaskActivity(client, updatedTask.id, req.user.id, existingTask.status, updatedTask.status);
+        }
+        
+        await client.query('COMMIT');
+        res.json({ task: updatedTask });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    } finally {
+        client.release();
+    }
 
 };
 
