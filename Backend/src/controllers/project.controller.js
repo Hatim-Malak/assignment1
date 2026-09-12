@@ -1,6 +1,20 @@
 import pool from "../config/db.js";
 
 export const getAllProjects = async (req, res) => {
+     try {
+        let result;
+        if (req.user.role === 'Admin') {
+            result = await pool.query("SELECT * FROM projects ORDER BY created_at DESC");
+        } else if (req.user.role === 'Project Manager') {
+            result = await pool.query("SELECT * FROM projects WHERE created_by = $1 ORDER BY created_at DESC", [req.user.id]);
+        } else {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+        res.json({ projects: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 
 };
 
