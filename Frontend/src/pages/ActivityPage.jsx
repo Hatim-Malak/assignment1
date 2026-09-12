@@ -41,11 +41,12 @@ const ActivityPage = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontWeight: 500, fontSize: '0.95rem' }}>
-                    {activity.action || "System Update"}
+                    {activity.modified_by ? `${activity.modified_by} updated ` : 'System updated '}
+                    <span style={{ color: 'var(--brand-color)' }}>"{activity.task_title || `Task #${activity.task_id}`}"</span>
                   </p>
-                  {activity.details && (
+                  {activity.old_status && activity.new_status && (
                     <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                      {typeof activity.details === 'string' ? activity.details : JSON.stringify(activity.details)}
+                      Status changed from <strong>{activity.old_status}</strong> to <strong>{activity.new_status}</strong>
                     </p>
                   )}
                   <p style={{ margin: '0.25rem 0 0 0', color: '#9ca3af', fontSize: '0.75rem' }}>

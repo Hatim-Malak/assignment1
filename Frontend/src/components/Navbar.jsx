@@ -75,12 +75,7 @@ const Navbar = () => {
             )}
           </div>
 
-          <Link to="/profile" style={{ color: 'var(--text-secondary)', display: 'flex', padding: '8px', borderRadius: '50%' }}
-             onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
-             onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
-            <User size={20} />
-          </Link>
-          
+
           <button onClick={handleLogout} style={{ color: 'var(--text-secondary)', display: 'flex', padding: '8px', borderRadius: '50%' }}
              onMouseOver={(e) => { e.currentTarget.style.background = 'var(--danger)'; e.currentTarget.style.color = '#fff'; }}
              onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
