@@ -2,6 +2,50 @@ import pool from "../config/db.js";
 
 
 export const getAllTasks = async (req, res) => {
+    try {
+        const { status, priority, start_date, end_date } = req.query;
+        let query = "SELECT t.* FROM tasks t";
+        const values = [];
+        let whereClauses = [];
+        
+        if (req.user.role === 'Project Manager') {
+            query += " JOIN projects p ON t.project_id = p.id";
+            values.push(req.user.id);
+            whereClauses.push(`p.created_by = $${values.length}`);
+        } else if (req.user.role === 'Developer') {
+            values.push(req.user.id);
+            whereClauses.push(`t.assigned_to = $${values.length}`);
+        }
+
+        if (status) {
+            values.push(status);
+            whereClauses.push(`t.status = $${values.length}`);
+        }
+        if (priority) {
+            values.push(priority);
+            whereClauses.push(`t.priority = $${values.length}`);
+        }
+        if (start_date) {
+            values.push(start_date);
+            whereClauses.push(`t.due_date >= $${values.length}`);
+        }
+        if (end_date) {
+            values.push(end_date);
+            whereClauses.push(`t.due_date <= $${values.length}`);
+        }
+
+        if (whereClauses.length > 0) {
+            query += " WHERE " + whereClauses.join(" AND ");
+        }
+
+        query += " ORDER BY t.created_at DESC";
+
+        const result = await pool.query(query, values);
+        res.json({ tasks: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 
 };
 
