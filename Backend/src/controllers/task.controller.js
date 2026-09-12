@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-import { emitTaskActivity } from "../socket/socket.js";
+import { emitTaskActivity, emitNotification } from "../socket/socket.js";
 
 const logTaskActivity = async (client, taskId, userId, oldStatus, newStatus) => {
     if (oldStatus !== newStatus) {
@@ -110,6 +110,14 @@ export const createTask = async (req, res) => {
         await logTaskActivity(client, newTask.id, req.user.id, null, newTask.status);
         emitTaskActivity(newTask.project_id, newTask.assigned_to, { type: 'task_created', task: newTask });
         
+        if (newTask.assigned_to) {
+            const notifResult = await client.query(
+                "INSERT INTO notifications (user_id, message) VALUES ($1, $2) RETURNING *",
+                [newTask.assigned_to, `You have been assigned to a new task: ${newTask.title}`]
+            );
+            emitNotification(newTask.assigned_to, notifResult.rows[0]);
+        }
+        
         await client.query('COMMIT');
         res.status(201).json({ task: newTask });
     } catch (err) {
@@ -150,6 +158,22 @@ export const updateTask = async (req, res) => {
             emitTaskActivity(updatedTask.project_id, updatedTask.assigned_to, { type: 'task_status_updated', task: updatedTask, old_status: existingTask.status });
         } else {
             emitTaskActivity(updatedTask.project_id, updatedTask.assigned_to, { type: 'task_updated', task: updatedTask });
+        }
+        
+        if (updatedTask.assigned_to && updatedTask.assigned_to !== existingTask.assigned_to) {
+            const notifResult = await client.query(
+                "INSERT INTO notifications (user_id, message) VALUES ($1, $2) RETURNING *",
+                [updatedTask.assigned_to, `You have been assigned to a task: ${updatedTask.title}`]
+            );
+            emitNotification(updatedTask.assigned_to, notifResult.rows[0]);
+        }
+        
+        if (existingTask.project_created_by && req.user.id !== existingTask.project_created_by) {
+            const pmNotif = await client.query(
+                "INSERT INTO notifications (user_id, message) VALUES ($1, $2) RETURNING *",
+                [existingTask.project_created_by, `Task '${updatedTask.title}' was updated by ${req.user.username || 'someone'}`]
+            );
+            emitNotification(existingTask.project_created_by, pmNotif.rows[0]);
         }
         
         await client.query('COMMIT');
@@ -194,6 +218,14 @@ export const updateTaskStatus = async (req, res) => {
         if (status !== existingTask.status) {
             await logTaskActivity(client, updatedTask.id, req.user.id, existingTask.status, updatedTask.status);
             emitTaskActivity(updatedTask.project_id, updatedTask.assigned_to, { type: 'task_status_updated', task: updatedTask, old_status: existingTask.status });
+            
+            if (existingTask.project_created_by && req.user.id !== existingTask.project_created_by) {
+                const pmNotif = await client.query(
+                    "INSERT INTO notifications (user_id, message) VALUES ($1, $2) RETURNING *",
+                    [existingTask.project_created_by, `Task '${updatedTask.title}' status changed to ${status}`]
+                );
+                emitNotification(existingTask.project_created_by, pmNotif.rows[0]);
+            }
         }
         
         await client.query('COMMIT');
