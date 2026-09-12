@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 
 export const getAllProjects = async (req, res) => {
+
 };
 
 export const getProjectById = async (req, res) => {
