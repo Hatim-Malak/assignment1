@@ -136,7 +136,13 @@ export const getCurrentUser = async(req,res) => {
 
 }
 export const getAllUsers = async(req,res) => {
-
+    try {
+        const result = await pool.query("SELECT id, username, role, created_at FROM users ORDER BY created_at DESC");
+        res.json({ users: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 }
 export const createUser = async(req,res) => {
     try {
