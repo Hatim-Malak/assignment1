@@ -6,7 +6,33 @@ export const getAllTasks = async (req, res) => {
 };
 
 export const getTaskById = async (req, res) => {
+        try {
+        const { id } = req.params;
+        let query = "SELECT t.* FROM tasks t";
+        const values = [id];
+        let whereClauses = ["t.id = $1"];
+        
+        if (req.user.role === 'Project Manager') {
+            query += " JOIN projects p ON t.project_id = p.id";
+            values.push(req.user.id);
+            whereClauses.push(`p.created_by = $${values.length}`);
+        } else if (req.user.role === 'Developer') {
+            values.push(req.user.id);
+            whereClauses.push(`t.assigned_to = $${values.length}`);
+        }
 
+        query += " WHERE " + whereClauses.join(" AND ");
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Task not found or access denied" });
+        }
+
+        res.json({ task: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 };
 
 export const createTask = async (req, res) => {
