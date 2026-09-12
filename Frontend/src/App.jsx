@@ -32,6 +32,7 @@ const App = () => {
 
   return (
     <div className= "">
+      {authUser && <Navbar />}
       <Routes>
         <Route path='/' element={authUser?<HomePage/>:<Navigate to="/login" />}/>
         <Route path='/login' element={!authUser?<LoginPage/>:<Navigate to="/" />}/>
