@@ -1,4 +1,6 @@
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import pool from "../config/db.js";
 
 const generateTokens = (user) => {
     const accessToken = jwt.sign(
@@ -57,7 +59,12 @@ export const refreshToken = async(req,res) => {
             return res.status(401).json({ error: "Refresh token is required" });
         }
 
-        jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'refresh-secret', async (err, decoded) => {
+        const blacklistedResult = await pool.query("SELECT * FROM blacklisted_tokens WHERE token = $1", [token]);
+        if (blacklistedResult.rows.length > 0) {
+            return res.status(403).json({ error: "Refresh token is blacklisted" });
+        }
+
+        jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'flsahfhghlerofkhrowowoeyr', async (err, decoded) => {
             if (err) {
                 return res.status(403).json({ error: "Invalid or expired refresh token" });
             }
@@ -86,12 +93,34 @@ export const refreshToken = async(req,res) => {
 
 }
 export const logout = async(req,res) => {
-    res.clearCookie('refreshToken', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-    });
-    res.json({ message: "Logged out successfully" });
+    try {
+        const refreshToken = req.cookies.refreshToken;
+        if (refreshToken) {
+            await pool.query(
+                "INSERT INTO blacklisted_tokens (token) VALUES ($1) ON CONFLICT (token) DO NOTHING",
+                [refreshToken]
+            );
+        }
+
+        const authHeader = req.headers['authorization'];
+        const accessToken = authHeader && authHeader.split(' ')[1];
+        if (accessToken) {
+            await pool.query(
+                "INSERT INTO blacklisted_tokens (token) VALUES ($1) ON CONFLICT (token) DO NOTHING",
+                [accessToken]
+            );
+        }
+
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict'
+        });
+        res.json({ message: "Logged out successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 }
 export const getCurrentUser = async(req,res) => {
 
