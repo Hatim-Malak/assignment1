@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { emitTaskActivity } from "../socket/socket.js";
 
 const logTaskActivity = async (client, taskId, userId, oldStatus, newStatus) => {
     if (oldStatus !== newStatus) {
@@ -107,6 +108,7 @@ export const createTask = async (req, res) => {
         
         const newTask = result.rows[0];
         await logTaskActivity(client, newTask.id, req.user.id, null, newTask.status);
+        emitTaskActivity(newTask.project_id, newTask.assigned_to, { type: 'task_created', task: newTask });
         
         await client.query('COMMIT');
         res.status(201).json({ task: newTask });
@@ -145,6 +147,9 @@ export const updateTask = async (req, res) => {
         const updatedTask = result.rows[0];
         if (status && status !== existingTask.status) {
             await logTaskActivity(client, updatedTask.id, req.user.id, existingTask.status, updatedTask.status);
+            emitTaskActivity(updatedTask.project_id, updatedTask.assigned_to, { type: 'task_status_updated', task: updatedTask, old_status: existingTask.status });
+        } else {
+            emitTaskActivity(updatedTask.project_id, updatedTask.assigned_to, { type: 'task_updated', task: updatedTask });
         }
         
         await client.query('COMMIT');
@@ -188,6 +193,7 @@ export const updateTaskStatus = async (req, res) => {
         const updatedTask = result.rows[0];
         if (status !== existingTask.status) {
             await logTaskActivity(client, updatedTask.id, req.user.id, existingTask.status, updatedTask.status);
+            emitTaskActivity(updatedTask.project_id, updatedTask.assigned_to, { type: 'task_status_updated', task: updatedTask, old_status: existingTask.status });
         }
         
         await client.query('COMMIT');

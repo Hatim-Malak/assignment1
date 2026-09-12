@@ -1,5 +1,6 @@
 import dotenv from "dotenv"
 import express from "express"
+import http from "http"
 import cors from "cors"
 import cookieParser from "cookie-parser"
 import pool from "./config/db.js"
@@ -8,9 +9,12 @@ import clientRoutes from "./routes/client.routes.js"
 import projectRoutes from "./routes/project.routes.js"
 import taskRoutes from "./routes/task.routes.js"
 import dashboardRoutes from "./routes/dashboard.routes.js"
+import { initSocket } from "./socket/socket.js"
 dotenv.config()
 
 const app = express();
+const server = http.createServer(app);
+const io = initSocket(server);
 const port = process.env.PORT || 30001
 
 app.use(express.json())
@@ -28,6 +32,6 @@ app.get("/",async (req,res) => {
     res.send(`The database name is ${result.rows[0].current_database}`)
 })
 
-app.listen(port,() => {
+server.listen(port,() => {
     console.log(`The backend is running on the port ${port}`)
 })

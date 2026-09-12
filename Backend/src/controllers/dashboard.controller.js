@@ -1,4 +1,5 @@
 import pool from "../config/db.js";
+import { getActiveUserCount } from "../socket/socket.js";
 
 export const getDashboardData = async (req, res) => {
     try {
@@ -18,8 +19,7 @@ export const getDashboardData = async (req, res) => {
             const overdueResult = await pool.query("SELECT COUNT(*) FROM tasks WHERE status = 'Overdue' OR (due_date < NOW() AND status != 'Done')");
             data.overdue_tasks_count = parseInt(overdueResult.rows[0].count, 10);
 
-
-            data.active_users_online = 0; 
+            data.active_users_online = getActiveUserCount();
 
         } else if (role === 'Project Manager') {
             const projectsResult = await pool.query("SELECT COUNT(*) FROM projects WHERE created_by = $1", [userId]);
