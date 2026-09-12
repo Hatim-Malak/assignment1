@@ -7,6 +7,7 @@ import userRoutes from "./routes/user.routes.js"
 import clientRoutes from "./routes/client.routes.js"
 import projectRoutes from "./routes/project.routes.js"
 import taskRoutes from "./routes/task.routes.js"
+import dashboardRoutes from "./routes/dashboard.routes.js"
 dotenv.config()
 
 const app = express();
@@ -20,6 +21,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.get("/",async (req,res) => {
     const result = await pool.query("SELECT current_database()");
