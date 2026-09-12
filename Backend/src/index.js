@@ -9,6 +9,7 @@ import clientRoutes from "./routes/client.routes.js"
 import projectRoutes from "./routes/project.routes.js"
 import taskRoutes from "./routes/task.routes.js"
 import dashboardRoutes from "./routes/dashboard.routes.js"
+import notificationRoutes from "./routes/notification.routes.js"
 import { initSocket } from "./socket/socket.js"
 dotenv.config()
 
@@ -26,6 +27,7 @@ app.use("/api/clients", clientRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/",async (req,res) => {
     const result = await pool.query("SELECT current_database()");

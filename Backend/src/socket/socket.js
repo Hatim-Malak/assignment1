@@ -79,4 +79,9 @@ export const emitTaskActivity = (projectId, assignedToId, eventData) => {
     }
 };
 
+export const emitNotification = (userId, notificationData) => {
+    if (!io) return;
+    io.to(`user_${userId}`).emit('new_notification', notificationData);
+};
+
 export const getIo = () => io;
