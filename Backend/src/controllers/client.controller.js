@@ -1,6 +1,13 @@
 import pool from "../config/db.js";
 
 export const getAllClients = async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM clients ORDER BY created_at DESC");
+        res.json({ clients: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 };
 
 export const getClientById = async (req, res) => {
