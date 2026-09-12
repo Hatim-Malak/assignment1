@@ -51,10 +51,47 @@ export const login = async(req,res) => {
 
 }
 export const refreshToken = async(req,res) => {
+     try {
+        const token = req.cookies.refreshToken;
+        if (!token) {
+            return res.status(401).json({ error: "Refresh token is required" });
+        }
+
+        jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'refresh-secret', async (err, decoded) => {
+            if (err) {
+                return res.status(403).json({ error: "Invalid or expired refresh token" });
+            }
+
+            const result = await pool.query("SELECT id, username, role FROM users WHERE id = $1", [decoded.id]);
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: "User not found" });
+            }
+            
+            const user = result.rows[0];
+            const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
+
+            res.cookie('refreshToken', newRefreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            });
+
+            res.json({ accessToken });
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 
 }
 export const logout = async(req,res) => {
-
+    res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+    });
+    res.json({ message: "Logged out successfully" });
 }
 export const getCurrentUser = async(req,res) => {
 
