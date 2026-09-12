@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useTaskStore } from '../store/useTaskStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useAuthstore } from '../store/useAuthStore'
-import { Loader, Plus, CheckSquare } from 'lucide-react'
+import { Loader, Plus, CheckSquare, Trash2, Edit2 } from 'lucide-react'
 
 const TasksPage = () => {
   const { tasks, isLoading: isTasksLoading, getTasks, createTask, updateTaskStatus } = useTaskStore();
@@ -20,6 +20,8 @@ const TasksPage = () => {
     due_date: ''
   });
 
+  const [editingTask, setEditingTask] = useState(null);
+
   useEffect(() => {
     getTasks();
     if (authUser?.role !== 'Developer') {
@@ -27,17 +29,46 @@ const TasksPage = () => {
     }
   }, [getTasks, getProjects, authUser]);
 
-  const handleCreate = async (e) => {
+  const handleCreateOrUpdate = async (e) => {
     e.preventDefault();
-    await createTask({
+    const taskPayload = {
       ...newTask,
       project_id: parseInt(newTask.project_id),
       assigned_to: newTask.assigned_to ? parseInt(newTask.assigned_to) : null
-    });
+    };
+
+    if (editingTask) {
+      await updateTask(editingTask, taskPayload);
+    } else {
+      await createTask(taskPayload);
+    }
+    
     setNewTask({
       title: '', description: '', project_id: '', assigned_to: '', status: 'To Do', priority: 'Medium', due_date: ''
     });
     setShowCreateForm(false);
+    setEditingTask(null);
+  };
+
+  const handleEditClick = (task) => {
+    setNewTask({
+      title: task.title,
+      description: task.description || '',
+      project_id: task.project_id,
+      assigned_to: task.assigned_to || '',
+      status: task.status,
+      priority: task.priority,
+      due_date: task.due_date ? task.due_date.split('T')[0] : ''
+    });
+    setEditingTask(task.id);
+    setShowCreateForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this task?")) {
+      await deleteTask(id);
+    }
   };
 
   const handleStatusChange = async (taskId, newStatus) => {
@@ -80,11 +111,13 @@ const TasksPage = () => {
         )}
       </div>
 
-      {/* Create Form */}
+      {/* Create/Edit Form */}
       {showCreateForm && (
         <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--brand-color)' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>Create New Task</h3>
-          <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>
+            {editingTask ? 'Edit Task' : 'Create New Task'}
+          </h3>
+          <form onSubmit={handleCreateOrUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             
             <div className="flex gap-4" style={{ flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 300px' }}>
@@ -158,9 +191,13 @@ const TasksPage = () => {
             </div>
 
             <div className="flex gap-2" style={{ justifyContent: 'flex-end' }}>
-              <button type="button" className="btn btn-outline" onClick={() => setShowCreateForm(false)}>Cancel</button>
+              <button type="button" className="btn btn-outline" onClick={() => {
+                setShowCreateForm(false);
+                setEditingTask(null);
+                setNewTask({ title: '', description: '', project_id: '', assigned_to: '', status: 'To Do', priority: 'Medium', due_date: '' });
+              }}>Cancel</button>
               <button type="submit" className="btn btn-primary" disabled={isTasksLoading}>
-                {isTasksLoading ? 'Creating...' : 'Save Task'}
+                {isTasksLoading ? 'Saving...' : (editingTask ? 'Update Task' : 'Save Task')}
               </button>
             </div>
           </form>
@@ -199,6 +236,16 @@ const TasksPage = () => {
                     }}>
                       {task.priority}
                     </span>
+                    {canCreate && (
+                      <div className="flex gap-2 ml-2">
+                        <button onClick={() => handleEditClick(task)} style={{ color: 'var(--text-secondary)' }} className="hover:text-blue-500">
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(task.id)} style={{ color: 'var(--text-secondary)' }} className="hover:text-red-500">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0, textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>
                     {task.description || "No description."}
@@ -228,7 +275,7 @@ const TasksPage = () => {
                     <option value="To Do">To Do</option>
                     <option value="In Progress">In Progress</option>
                     <option value="Done">Done</option>
-                    <option value="Overdue">Overdue</option>
+                    {task.status === 'Overdue' && <option value="Overdue" disabled>Overdue</option>}
                   </select>
                 </div>
               </div>

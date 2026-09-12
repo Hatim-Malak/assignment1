@@ -12,6 +12,8 @@ import dashboardRoutes from "./routes/dashboard.routes.js"
 import notificationRoutes from "./routes/notification.routes.js"
 import activityRoutes from "./routes/activity.routes.js"
 import { initSocket } from "./socket/socket.js"
+import { startOverdueJob } from "./jobs/overdue.job.js"
+
 dotenv.config()
 
 const app = express();
@@ -41,4 +43,5 @@ app.get("/",async (req,res) => {
 
 server.listen(port,() => {
     console.log(`The backend is running on the port ${port}`)
+    startOverdueJob()
 })
