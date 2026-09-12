@@ -4,6 +4,19 @@ export const getAllClients = async (req, res) => {
 };
 
 export const getClientById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query("SELECT * FROM clients WHERE id = $1", [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Client not found" });
+        }
+        
+        res.json({ client: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 };
 
 export const createClient = async (req, res) => {
