@@ -1,5 +1,13 @@
 import pool from "../config/db.js";
 
+const logTaskActivity = async (client, taskId, userId, oldStatus, newStatus) => {
+    if (oldStatus !== newStatus) {
+        await client.query(
+            "INSERT INTO task_activity_logs (task_id, user_id, old_status, new_status) VALUES ($1, $2, $3, $4)",
+            [taskId, userId, oldStatus, newStatus]
+        );
+    }
+};
 
 export const getAllTasks = async (req, res) => {
     try {
@@ -194,5 +202,23 @@ export const updateTaskStatus = async (req, res) => {
 };
 
 export const deleteTask = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const existingResult = await pool.query("SELECT t.*, p.created_by as project_created_by FROM tasks t JOIN projects p ON t.project_id = p.id WHERE t.id = $1", [id]);
+        if (existingResult.rows.length === 0) {
+            return res.status(404).json({ error: "Task not found" });
+        }
+        
+        if (req.user.role === 'Project Manager' && existingResult.rows[0].project_created_by !== req.user.id) {
+            return res.status(403).json({ error: "Forbidden: You can only delete tasks in your own projects" });
+        }
+
+        const result = await pool.query("DELETE FROM tasks WHERE id = $1 RETURNING *", [id]);
+        res.json({ message: "Task deleted successfully", task: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 
 };
