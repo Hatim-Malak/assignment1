@@ -34,9 +34,35 @@ export const markAsRead = async (req, res) => {
 };
 
 export const markAllAsRead = async (req, res) => {
+     try {
+        await pool.query(
+            "UPDATE notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE",
+            [req.user.id]
+        );
+        res.json({ message: "All notifications marked as read" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 
 };
 
 export const deleteNotification = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            "DELETE FROM notifications WHERE id = $1 AND user_id = $2 RETURNING *",
+            [id, req.user.id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Notification not found" });
+        }
+        
+        res.json({ message: "Notification deleted successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 
 };
