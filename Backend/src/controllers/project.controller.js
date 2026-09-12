@@ -90,4 +90,23 @@ export const updateProject = async (req, res) => {
 };
 
 export const deleteProject = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const checkResult = await pool.query("SELECT created_by FROM projects WHERE id = $1", [id]);
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ error: "Project not found" });
+        }
+        
+        if (req.user.role === 'Project Manager' && checkResult.rows[0].created_by !== req.user.id) {
+            return res.status(403).json({ error: "Forbidden: You can only delete projects you created" });
+        }
+
+        const result = await pool.query("DELETE FROM projects WHERE id = $1 RETURNING *", [id]);
+        
+        res.json({ message: "Project deleted successfully", project: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+
 };
