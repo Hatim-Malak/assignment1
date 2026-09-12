@@ -4,6 +4,25 @@ export const getAllProjects = async (req, res) => {
 };
 
 export const getProjectById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query("SELECT * FROM projects WHERE id = $1", [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Project not found" });
+        }
+        
+        const project = result.rows[0];
+        
+        if (req.user.role === 'Project Manager' && project.created_by !== req.user.id) {
+            return res.status(403).json({ error: "Forbidden: You can only view projects you created" });
+        }
+        
+        res.json({ project });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 };
 
 export const createProject = async (req, res) => {
