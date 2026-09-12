@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { axiosInstance } from '../lib/axios.js'
+import { useSocketStore } from './useSocketStore.js'
 import toast from 'react-hot-toast'
 
 export const useAuthstore = create((set) => ({
@@ -12,6 +13,7 @@ export const useAuthstore = create((set) => ({
         try {
             const res = await axiosInstance.get('/users/profile');
             set({ authUser: res.data.user || res.data });
+            useSocketStore.getState().connectSocket();
         } catch (error) {
             console.log("Error in checkAuth:", error);
             set({ authUser: null });
@@ -38,6 +40,7 @@ export const useAuthstore = create((set) => ({
         try {
             const res = await axiosInstance.post('/users/login', data);
             set({ authUser: res.data.user });
+            useSocketStore.getState().connectSocket();
             toast.success("Logged in successfully");
         } catch (error) {
             toast.error(error.response?.data?.error || "Invalid credentials");
@@ -50,6 +53,7 @@ export const useAuthstore = create((set) => ({
         try {
             await axiosInstance.post('/users/logout');
             set({ authUser: null });
+            useSocketStore.getState().disconnectSocket();
             toast.success("Logged out successfully");
         } catch (error) {
             toast.error(error.response?.data?.error || "Failed to logout");
