@@ -6,12 +6,8 @@ import toast from 'react-hot-toast'
 
 export const useSocketStore = create((set, get) => ({
     socket: null,
-    
-    connectSocket: () => {
-        // Don't connect if already connected
-        if (get().socket?.connected) return;
 
-        // Pass withCredentials to ensure the backend receives the JWT cookie for auth
+    connectSocket: () => {
         const socket = io('http://localhost:3000', {
             withCredentials: true,
         });
